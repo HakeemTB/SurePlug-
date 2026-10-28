@@ -2,7 +2,7 @@ import { ArrowRight, MapPin, MessageCircle, Phone, Search, ShieldCheck, Shopping
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
-const API_BASE = 'https://sureplug-0q7j.onrender.com/api/v1'
+const API_BASE = '/api/v1'
 
 type Category = { id: number; name: string; slug: string; description?: string }
 type Campus = { id: number; name: string; zone: string; description: string }
@@ -65,6 +65,14 @@ function errorMessage(payload: unknown, fallback: string) {
   return fallback
 }
 
+class ApiError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> {
   const method = (options.method || 'GET').toUpperCase()
   const headers = new Headers(options.headers)
@@ -81,7 +89,7 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   })
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null)
-    throw new Error(errorMessage(payload, `Request failed (${response.status})`))
+    throw new ApiError(errorMessage(payload, `Request failed (${response.status})`), response.status)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
@@ -504,7 +512,8 @@ function DashboardPage() {
     fetchJson<VendorDashboard>('/vendors/dashboard/').then((data) => {
       if (active) setProfile(data)
     }).catch((requestError: Error) => {
-      if (active) setError(requestError.message)
+      const notSignedIn = requestError instanceof ApiError && [401, 403].includes(requestError.status)
+      if (active && !notSignedIn) setError(requestError.message)
     }).finally(() => {
       if (active) setLoading(false)
     })
