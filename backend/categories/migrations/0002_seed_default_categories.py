@@ -1,4 +1,5 @@
 from django.db import migrations
+from django.db.models import Q
 
 
 def seed_default_categories(apps, schema_editor):
@@ -58,12 +59,16 @@ def seed_default_categories(apps, schema_editor):
     ]
 
     for category in default_categories:
-        Category.objects.get_or_create(
+        # Both name and slug are unique, so skip any category that already
+        # exists under either one (keeps the migration safe on existing data).
+        if Category.objects.filter(
+            Q(slug=category["slug"]) | Q(name=category["name"])
+        ).exists():
+            continue
+        Category.objects.create(
             slug=category["slug"],
-            defaults={
-                "name": category["name"],
-                "description": category["description"],
-            },
+            name=category["name"],
+            description=category["description"],
         )
 
 
