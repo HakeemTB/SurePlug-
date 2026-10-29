@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './App.css';
+@import './theme.css';
 
 :root {
   font-family: Inter, 'Segoe UI', sans-serif;

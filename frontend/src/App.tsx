@@ -1,6 +1,6 @@
-import { ArrowRight, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Star, Store } from 'lucide-react'
+import { ArrowRight, Compass, House, User, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Star, Store } from 'lucide-react'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { BrowserRouter, Link, useLocation, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 const API_BASE = '/api/v1'
 
@@ -95,16 +95,52 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   return response.json() as Promise<T>
 }
 
+function ImagePlaceholder({ className = '' }: { className?: string }) {
+  return (
+    <div role="img" aria-label="No photo available" className={`image-placeholder flex flex-col items-center justify-center gap-2 ${className}`}>
+      <ShoppingBag className="h-8 w-8" />
+      <span className="text-xs font-semibold">No photo available</span>
+    </div>
+  )
+}
+
+function RetryAlert({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="retry-alert flex flex-col gap-3 rounded-2xl border p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <span>{message}</span>
+      <button type="button" onClick={onRetry} className="retry-button shrink-0 rounded-full px-4 py-2 text-sm font-bold">Try again</button>
+    </div>
+  )
+}
+
+function BottomNav() {
+  const { pathname } = useLocation()
+  const items = [
+    { to: '/', label: 'Home', icon: House, active: pathname === '/' },
+    { to: '/products', label: 'Explore', icon: Compass, active: pathname.startsWith('/product') },
+    { to: '/vendors', label: 'Vendors', icon: Store, active: pathname.startsWith('/vendor') && pathname !== '/vendor-dashboard' },
+    { to: '/dashboard', label: 'Account', icon: User, active: pathname.startsWith('/dashboard') },
+  ]
+  return (
+    <nav aria-label="Main" className="bottom-nav md:hidden">
+      {items.map(({ to, label, icon: Icon, active }) => (
+        <Link key={to} to={to} aria-current={active ? 'page' : undefined} className={`bottom-nav-item ${active ? 'is-active' : ''}`}>
+          <span className="bottom-nav-icon"><Icon className="h-5 w-5" /></span>{label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
 function ProductCard({ product }: { product: Product }) {
   return (
     <Link to={`/product/${product.slug}`} className="product-card group block overflow-hidden rounded-2xl border border-slate-200 bg-white transition duration-200 hover:-translate-y-1 hover:border-orange-300 hover:shadow-xl">
       <div className="product-card-image relative overflow-hidden bg-slate-100">
-        <img
-          src={product.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80'}
+        {product.image ? <img src={product.image}
           alt={product.name}
           loading="lazy"
           className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
-        />
+        /> : <ImagePlaceholder className="h-48 w-full" />}
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">{product.category?.name || 'General'}</span>
         {product.featured && <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white">Featured</span>}
       </div>
@@ -147,12 +183,6 @@ function SiteHeader() {
           <Store className="h-4 w-4" /><span className="hidden sm:inline">Sell on SurePlug</span><span className="sm:hidden">Sell</span>
         </Link>
       </div>
-      <nav aria-label="Mobile navigation" className="mobile-nav flex items-center gap-2 overflow-x-auto border-t border-slate-100 px-4 py-2 md:hidden">
-        <Link to="/" className="mobile-nav-link">Home</Link>
-        <Link to="/products" className="mobile-nav-link">Explore products</Link>
-        <Link to="/vendors" className="mobile-nav-link">Vendors</Link>
-        <Link to="/dashboard" className="mobile-nav-link">Seller dashboard</Link>
-      </nav>
     </header>
   )
 }
@@ -177,6 +207,7 @@ function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -185,7 +216,7 @@ function HomePage() {
     }).finally(() => { if (active) setLoading(false) })
     fetchJson<Category[]>('/categories/').then((data) => { if (active) setCategories(data) }).catch(() => undefined)
     return () => { active = false }
-  }, [])
+  }, [reloadKey])
 
   const filteredProducts = useMemo(() => products.filter((product) => {
     const query = search.trim().toLowerCase()
@@ -230,7 +261,7 @@ function HomePage() {
         <section id="latest-listings" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
           <div className="section-heading"><div><p className="eyebrow">Straight from the campus scene</p><h2 className="section-title">Fresh plugs</h2><p className="mt-2 text-sm text-slate-500">New finds from student vendors and local campus businesses.</p></div><Link to="/products" className="section-link">Browse everything <ArrowRight className="h-4 w-4" /></Link></div>
           {selectedCategory && <div className="mt-5 flex items-center gap-3 text-sm"><span className="rounded-full bg-orange-50 px-3 py-1.5 font-semibold text-orange-700">Filtering: {categories.find((item) => item.slug === selectedCategory)?.name || selectedCategory}</span><button onClick={() => setSelectedCategory('')} className="font-semibold text-slate-500 underline underline-offset-4 hover:text-slate-900">Clear filter</button></div>}
-          {loadError && <div role="alert" className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{loadError}</div>}
+          {loadError && <div className="mt-6"><RetryAlert message={loadError} onRetry={() => { setLoadError(''); setLoading(true); setReloadKey((key) => key + 1) }} /></div>}
           {loading ? <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="skeleton h-48" /><div className="space-y-3 p-4"><div className="skeleton h-4 w-2/3" /><div className="skeleton h-4 w-full" /><div className="skeleton h-6 w-1/3" /></div></div>)}</div> : filteredProducts.length > 0 ? <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{filteredProducts.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className="empty-state mt-7"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><Search className="h-5 w-5" /></span><h3 className="mt-4 font-bold text-slate-900">No listings to show yet</h3><p className="mx-auto mt-1 max-w-md text-sm text-slate-500">Try another category or browse all listings to see what's available.</p><Link to="/products" className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">Explore listings <ArrowRight className="h-4 w-4" /></Link></div>}
         </section>
 
@@ -252,6 +283,8 @@ function ProductListingPage() {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -268,7 +301,7 @@ function ProductListingPage() {
       setLoadError(error.message)
       setLoading(false)
     })
-  }, [])
+  }, [reloadKey])
 
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
@@ -299,8 +332,8 @@ function ProductListingPage() {
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex items-center justify-between gap-3"><div className="text-lg font-bold">Filters</div><button type="button" onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="text-xs font-semibold text-orange-700 hover:text-orange-800">Clear all</button></div>
-          <div className="space-y-5">
+          <div className="mb-5 flex items-center justify-between gap-3"><div className="text-lg font-bold">Filters</div><button type="button" className="filters-toggle ml-auto mr-3 text-sm font-bold lg:hidden" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>{filtersOpen ? 'Hide' : 'Show'}</button><button type="button" onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="text-xs font-semibold text-orange-700 hover:text-orange-800">Clear all</button></div>
+          <div className={`space-y-5 ${filtersOpen ? '' : 'hidden'} lg:block`}>
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">Category</span>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
@@ -330,7 +363,7 @@ function ProductListingPage() {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 text-sm text-slate-500"><span>{loading ? 'Loading listings…' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'listing' : 'listings'} found`}</span>{(search || category || campus || minPrice || maxPrice) && <button onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="font-semibold text-orange-700 hover:text-orange-800">Reset filters</button>}</div>
-          {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Could not load listings: {loadError}</div>}
+          {loadError && <RetryAlert message={`We couldn't load listings. ${loadError}`} onRetry={() => { setLoadError(''); setLoading(true); setReloadKey((key) => key + 1) }} />}
           {loading ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="skeleton h-48" /><div className="space-y-3 p-4"><div className="skeleton h-4 w-2/3" /><div className="skeleton h-4 w-full" /><div className="skeleton h-6 w-1/3" /></div></div>)}</div> : filteredProducts.length === 0 ? <div className="empty-state"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><Search className="h-5 w-5" /></span><h2 className="mt-4 font-bold text-slate-900">No matching listings</h2><p className="mt-1 text-sm text-slate-500">Try a different search or clear one or more filters.</p><button onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="mt-4 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">Clear filters</button></div> : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
@@ -368,7 +401,7 @@ function ProductDetailPage() {
     <div className="mx-auto max-w-6xl px-6 py-10">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
-          <img src={product.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80'} alt={product.name} className="h-[420px] w-full rounded-3xl object-cover shadow-lg" />
+          {product.image ? <img src={product.image} alt={product.name} className="h-[420px] w-full rounded-3xl object-cover shadow-lg" /> : <ImagePlaceholder className="h-[420px] w-full rounded-3xl" />}
           <div className="mt-4 grid grid-cols-3 gap-3">
             {(product.gallery || []).slice(0, 3).map((image) => (
               <img key={image.id} src={image.image} alt={product.name} className="h-28 w-full rounded-2xl object-cover" />
@@ -411,10 +444,11 @@ function VendorPage() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     fetchJson<Vendor[]>('/vendors/').then(setVendors).catch((error: Error) => setLoadError(error.message)).finally(() => setLoading(false))
-  }, [])
+  }, [reloadKey])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -423,7 +457,7 @@ function VendorPage() {
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Campus vendors</h1>
         <p className="mt-3 max-w-2xl leading-7 text-slate-300">Explore local storefronts, discover what they offer, and connect with sellers directly.</p>
       </div>
-      {loadError && <div role="alert" className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">We couldn't load vendors: {loadError}</div>}
+      {loadError && <div className="mb-5"><RetryAlert message={`We couldn't load vendors. ${loadError}`} onRetry={() => { setLoadError(''); setLoading(true); setReloadKey((key) => key + 1) }} /></div>}
       {loading ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="rounded-3xl border border-slate-200 bg-white p-5"><div className="skeleton h-16 w-16 rounded-2xl" /><div className="skeleton mt-4 h-5 w-2/3" /><div className="skeleton mt-3 h-4 w-full" /><div className="skeleton mt-2 h-4 w-4/5" /></div>)}</div> : vendors.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {vendors.map((vendor) => (
           <article key={vendor.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg">
@@ -753,6 +787,7 @@ function App() {
           </Routes>
         </div>
         <SiteFooter />
+        <BottomNav />
       </div>
     </BrowserRouter>
   )
