@@ -5,6 +5,9 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+
+from django.middleware.csrf import get_token
+
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -30,7 +33,10 @@ class CsrfCookieAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response({'message': 'CSRF cookie set.'})
+        return Response({
+            'message': 'CSRF cookie set.',
+            'csrfToken': get_token(request),
+        })
 
 
 class VendorRegistrationSerializer(serializers.Serializer):
