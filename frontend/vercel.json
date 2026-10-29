@@ -15,11 +15,6 @@
     {
       "source": "/media/:path*",
       "destination": "https://sureplug-0q7j.onrender.com/media/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }
-
