@@ -1,4 +1,4 @@
-import { ArrowRight, Compass, House, User, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Star, Store } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Compass, House, Tag, User, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Store } from 'lucide-react'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Link, useLocation, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
@@ -95,6 +95,25 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   return response.json() as Promise<T>
 }
 
+// WhatsApp links need the international format: 0803… becomes 234803…
+function toWhatsAppNumber(raw: string) {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.startsWith('234')) return digits
+  if (digits.startsWith('0') && digits.length === 11) return `234${digits.slice(1)}`
+  return digits
+}
+
+const RECENT_KEY = 'sureplug:recent'
+function readRecent(): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').slice(0, 8) : []
+  } catch { return [] }
+}
+function rememberProduct(slug: string) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify([slug, ...readRecent().filter((item) => item !== slug)].slice(0, 8))) } catch { /* storage unavailable */ }
+}
+
 function ImagePlaceholder({ className = '' }: { className?: string }) {
   return (
     <div role="img" aria-label="No photo available" className={`image-placeholder flex flex-col items-center justify-center gap-2 ${className}`}>
@@ -113,8 +132,15 @@ function RetryAlert({ message, onRetry }: { message: string; onRetry: () => void
   )
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) }, [pathname])
+  return null
+}
+
 function BottomNav() {
   const { pathname } = useLocation()
+  if (pathname.startsWith('/product/')) return null
   const items = [
     { to: '/', label: 'Home', icon: House, active: pathname === '/' },
     { to: '/products', label: 'Explore', icon: Compass, active: pathname.startsWith('/product') },
@@ -218,6 +244,8 @@ function HomePage() {
     return () => { active = false }
   }, [reloadKey])
 
+  const recent = useMemo(() => readRecent().map((slug) => products.find((item) => item.slug === slug)).filter((item): item is Product => Boolean(item)).slice(0, 4), [products])
+
   const filteredProducts = useMemo(() => products.filter((product) => {
     const query = search.trim().toLowerCase()
     const matchesText = !query || product.name.toLowerCase().includes(query) || product.description.toLowerCase().includes(query) || product.vendor?.business_name.toLowerCase().includes(query)
@@ -231,25 +259,25 @@ function HomePage() {
         <section className="hero-section">
           <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:px-8 lg:py-20">
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/80 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-orange-700 shadow-sm"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Built for Northern campus life</div>
-              <h1 className="mt-6 max-w-2xl text-4xl font-black leading-[1.04] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">Your campus <span className="text-orange-500">plug</span> for the good stuff.</h1>
-              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">From lunch and thrift finds to gadgets, fits, and everyday essentials — discover what students around your campus are selling. Check prices in naira and connect with vendors directly.</p>
+              <h1 className="max-w-2xl text-4xl font-black leading-[1.04] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">Buy and sell on campus.</h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">Browse food, fashion, gadgets and essentials from student sellers near you. See the price, message the seller on WhatsApp, and meet on campus.</p>
               <form onSubmit={(event) => { event.preventDefault(); navigate(`/products${search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ''}`) }} className="search-panel mt-8 flex max-w-2xl flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/5 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2"><Search className="h-5 w-5 shrink-0 text-slate-400" /><input aria-label="Search products" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Food, fits, gadgets, anything…" className="min-w-0 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400" /></div>
-                <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-600">Find my plug <ArrowRight className="h-4 w-4" /></button>
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2"><Search className="h-5 w-5 shrink-0 text-slate-400" /><input aria-label="Search products" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search food, clothes, phones, books…" className="min-w-0 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400" /></div>
+                <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-600">Search <ArrowRight className="h-4 w-4" /></button>
               </form>
-              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500"><span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Direct vendor contact</span><span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-orange-500" /> Around your campus</span></div>
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500"><span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Browse without signing up</span><span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-orange-500" /> Meet sellers on campus</span></div>
               {categories.length > 0 && <div className="mt-7 flex flex-wrap gap-2"><span className="mr-1 self-center text-xs font-semibold uppercase tracking-wider text-slate-400">Popular:</span>{categories.slice(0, 5).map((category) => <button key={category.id} onClick={() => { setSelectedCategory(category.slug); document.getElementById('latest-listings')?.scrollIntoView({ behavior: 'smooth' }) }} className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${selectedCategory === category.slug ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-orange-300 hover:text-orange-700'}`}>{category.name}</button>)}</div>}
             </div>
-            <div className="hero-art relative mx-auto w-full max-w-xl lg:max-w-none">
-              <div className="hero-orbit hero-orbit-one" /><div className="hero-orbit hero-orbit-two" />
-              <div className="relative z-10 grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="hero-photo hero-photo-tall col-span-1 row-span-2 overflow-hidden rounded-[2rem] bg-slate-200 shadow-2xl shadow-slate-900/10"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=900&q=85" alt="Shopping at a local store" className="h-full min-h-[280px] w-full object-cover sm:min-h-[360px]" /></div>
-                <div className="hero-photo overflow-hidden rounded-[1.5rem] bg-slate-200 shadow-xl"><img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=700&q=85" alt="Everyday accessories" className="h-36 w-full object-cover sm:h-48" /></div>
-                <div className="hero-photo overflow-hidden rounded-[1.5rem] bg-slate-200 shadow-xl"><img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=700&q=85" alt="Sneakers available to shop" className="h-36 w-full object-cover sm:h-48" /></div>
-              </div>
-              <div className="absolute -bottom-5 right-0 z-20 rounded-2xl border border-white/70 bg-white p-4 shadow-xl sm:-right-3 sm:p-5"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-600"><ShoppingBag className="h-5 w-5" /></span><div><div className="text-2xl font-black text-slate-950">{loading ? '—' : products.length}</div><div className="text-xs text-slate-500">Available listings</div></div></div></div>
-            </div>
+            <aside className="fresh-panel hidden lg:block" aria-label="Just listed">
+              <div className="fresh-panel-head"><h2 className="text-lg font-bold">Just listed</h2><Link to="/products" className="text-sm font-semibold text-indigo-800">See all</Link></div>
+              {loading && products.length === 0 ? <div className="space-y-3 py-2">{[0, 1, 2].map((item) => <div key={item} className="skeleton h-12 rounded-xl" />)}</div> : products.length > 0 ? products.slice(0, 4).map((item) => (
+                <Link key={item.id} to={`/product/${item.slug}`} className="fresh-item">
+                  <span className="fresh-thumb">{item.image ? <img src={item.image} alt="" loading="lazy" /> : <ShoppingBag className="h-5 w-5" />}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{item.name}</span><span className="block truncate text-xs text-slate-500">{item.vendor?.business_name || 'Campus seller'}</span></span>
+                  <span className="font-bold">{formatCurrency(item.price)}</span>
+                </Link>
+              )) : <p className="py-4 text-sm text-slate-500">New listings will show up here.</p>}
+            </aside>
           </div>
         </section>
 
@@ -258,8 +286,10 @@ function HomePage() {
           {categories.length > 0 ? <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{categories.map((category, index) => <button key={category.id} onClick={() => { setSelectedCategory(category.slug); document.getElementById('latest-listings')?.scrollIntoView({ behavior: 'smooth' }) }} className={`category-tile category-tile-${index % 4} text-left ${selectedCategory === category.slug ? 'category-tile-active' : ''}`}><span className="category-icon"><ShoppingBag className="h-5 w-5" /></span><span className="mt-4 block font-bold text-slate-900">{category.name}</span><span className="mt-1 block text-xs text-slate-500">Explore items <ArrowRight className="ml-1 inline h-3 w-3" /></span></button>)}</div> : <div className="mt-7 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">Categories will appear here when available.</div>}
         </section>
 
+        {recent.length > 0 && <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8"><div className="section-heading"><div><h2 className="section-title">Pick up where you left off</h2><p className="mt-2 text-sm text-slate-500">Listings you looked at recently.</p></div></div><div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{recent.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
+
         <section id="latest-listings" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-          <div className="section-heading"><div><p className="eyebrow">Straight from the campus scene</p><h2 className="section-title">Fresh plugs</h2><p className="mt-2 text-sm text-slate-500">New finds from student vendors and local campus businesses.</p></div><Link to="/products" className="section-link">Browse everything <ArrowRight className="h-4 w-4" /></Link></div>
+          <div className="section-heading"><div><p className="eyebrow">Straight from the campus scene</p><h2 className="section-title">Just listed</h2><p className="mt-2 text-sm text-slate-500">New finds from student vendors and local campus businesses.</p></div><Link to="/products" className="section-link">Browse everything <ArrowRight className="h-4 w-4" /></Link></div>
           {selectedCategory && <div className="mt-5 flex items-center gap-3 text-sm"><span className="rounded-full bg-orange-50 px-3 py-1.5 font-semibold text-orange-700">Filtering: {categories.find((item) => item.slug === selectedCategory)?.name || selectedCategory}</span><button onClick={() => setSelectedCategory('')} className="font-semibold text-slate-500 underline underline-offset-4 hover:text-slate-900">Clear filter</button></div>}
           {loadError && <div className="mt-6"><RetryAlert message={loadError} onRetry={() => { setLoadError(''); setLoading(true); setReloadKey((key) => key + 1) }} /></div>}
           {loading ? <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="skeleton h-48" /><div className="space-y-3 p-4"><div className="skeleton h-4 w-2/3" /><div className="skeleton h-4 w-full" /><div className="skeleton h-6 w-1/3" /></div></div>)}</div> : filteredProducts.length > 0 ? <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{filteredProducts.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className="empty-state mt-7"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><Search className="h-5 w-5" /></span><h3 className="mt-4 font-bold text-slate-900">No listings to show yet</h3><p className="mx-auto mt-1 max-w-md text-sm text-slate-500">Try another category or browse all listings to see what's available.</p><Link to="/products" className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">Explore listings <ArrowRight className="h-4 w-4" /></Link></div>}
@@ -285,6 +315,7 @@ function ProductListingPage() {
   const [loadError, setLoadError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [sort, setSort] = useState('recent')
 
   useEffect(() => {
     Promise.all([
@@ -316,7 +347,7 @@ function ProductListingPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-8 rounded-3xl bg-gradient-to-br from-orange-50 via-white to-slate-100 p-6 sm:p-8">
+      <div className="page-hero mb-8 p-6 sm:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="eyebrow">Product discovery</div>
@@ -362,11 +393,11 @@ function ProductListingPage() {
         </aside>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 text-sm text-slate-500"><span>{loading ? 'Loading listings…' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'listing' : 'listings'} found`}</span>{(search || category || campus || minPrice || maxPrice) && <button onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="font-semibold text-orange-700 hover:text-orange-800">Reset filters</button>}</div>
+          <div className="flex items-center justify-between gap-3 text-sm text-slate-500"><span>{loading ? 'Loading listings…' : `${filteredProducts.length} ${filteredProducts.length === 1 ? 'listing' : 'listings'} found`}</span><label className="sort-control"><span className="sr-only">Sort listings</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="recent">Newest first</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option></select></label>{(search || category || campus || minPrice || maxPrice) && <button onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="font-semibold text-orange-700 hover:text-orange-800">Reset filters</button>}</div>
           {loadError && <RetryAlert message={`We couldn't load listings. ${loadError}`} onRetry={() => { setLoadError(''); setLoading(true); setReloadKey((key) => key + 1) }} />}
           {loading ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="skeleton h-48" /><div className="space-y-3 p-4"><div className="skeleton h-4 w-2/3" /><div className="skeleton h-4 w-full" /><div className="skeleton h-6 w-1/3" /></div></div>)}</div> : filteredProducts.length === 0 ? <div className="empty-state"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600"><Search className="h-5 w-5" /></span><h2 className="mt-4 font-bold text-slate-900">No matching listings</h2><p className="mt-1 text-sm text-slate-500">Try a different search or clear one or more filters.</p><button onClick={() => { setCategory(''); setCampus(''); setMinPrice(''); setMaxPrice(''); setSearch('') }} className="mt-4 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">Clear filters</button></div> : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+              {[...filteredProducts].sort((a, b) => sort === 'price_asc' ? Number(a.price) - Number(b.price) : sort === 'price_desc' ? Number(b.price) - Number(a.price) : 0).map((product) => <ProductCard key={product.id} product={product} />)}
             </div>
           )}
         </div>
@@ -385,7 +416,7 @@ function ProductDetailPage() {
     if (!slug) return
     setLoading(true)
     setLoadError('')
-    fetchJson<Product>(`/products/${slug}/`).then(setProduct).catch((error: Error) => {
+    fetchJson<Product>(`/products/${slug}/`).then((data) => { setProduct(data); rememberProduct(data.slug) }).catch((error: Error) => {
       setProduct(null)
       setLoadError(error.message)
     }).finally(() => setLoading(false))
@@ -395,10 +426,14 @@ function ProductDetailPage() {
   if (!product) return <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6"><div role="alert" className="rounded-3xl border border-red-200 bg-white p-8"><h1 className="text-2xl font-black text-slate-900">We couldn't find that listing</h1><p className="mt-2 text-sm text-slate-600">{loadError || 'This product is not available.'}</p><Link to="/products" className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">Browse other products</Link></div></div>
 
   const contactMessage = encodeURIComponent(`Hi ${product.vendor?.business_name}, I'm interested in ${product.name}. Can you confirm the price and availability?`)
-  const whatsappLink = `https://wa.me/${(product.whatsapp_number || product.contact_phone || '2340000000000').replace(/\D/g, '')}?text=${contactMessage}`
+  const phone = (product.contact_phone || product.vendor?.phone || '').trim()
+  const whatsappNumber = toWhatsAppNumber(product.whatsapp_number || phone)
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${contactMessage}`
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-4 pb-32 pt-4 sm:px-6 lg:pb-12 lg:pt-6">
+      <Link to="/products" className="back-link"><ArrowLeft className="h-4 w-4" /> All listings</Link>
+      <div className="h-2" />
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
           {product.image ? <img src={product.image} alt={product.name} className="h-[420px] w-full rounded-3xl object-cover shadow-lg" /> : <ImagePlaceholder className="h-[420px] w-full rounded-3xl" />}
@@ -410,16 +445,17 @@ function ProductDetailPage() {
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-orange-700">{product.category?.name || 'Premium pick'}</span>
-            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700"><Star className="h-3.5 w-3.5 fill-current text-yellow-500" /> {product.condition}</span>
+            <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">{product.category?.name || 'General'}</span>
+            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700"><Tag className="h-3.5 w-3.5" /> <span className="capitalize">{product.condition}</span></span>
           </div>
           <h1 className="mt-4 text-3xl font-black text-slate-900">{product.name}</h1>
           <div className="mt-3 text-4xl font-black text-slate-900">{formatCurrency(product.price)}</div>
           <div className="mt-2 text-sm text-slate-500">Last price update: {new Date(product.price_updated_at).toLocaleDateString()}</div>
           <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">{product.description}</div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <a href={whatsappLink} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-white"><MessageCircle className="h-4 w-4" /> WhatsApp</a>
-            <a href={`tel:${product.contact_phone || product.vendor?.phone}`} className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900"><Phone className="h-4 w-4" /> Call seller</a>
+          <div className="contact-actions mt-6 grid gap-3">
+            {whatsappNumber && <a href={whatsappLink} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white"><MessageCircle className="h-4 w-4" /> WhatsApp</a>}
+            {phone && <a href={`tel:${phone}`} className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-900"><Phone className="h-4 w-4" /> Call seller</a>}
+            {!whatsappNumber && !phone && <p className="rounded-xl bg-slate-100 p-3 text-center text-sm text-slate-600">This seller hasn't added contact details yet.</p>}
           </div>
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between">
@@ -434,6 +470,7 @@ function ProductDetailPage() {
             </div>
             <div className="mt-4 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4" /> {product.vendor?.location_description || 'Campus neighbourhood'}</div>
           </div>
+          <p className="safety-tip mt-4 flex gap-2 text-xs leading-5"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />Meet in a public spot on campus, check the item, then pay. Never send money before you see it.</p>
         </div>
       </div>
     </div>
@@ -452,10 +489,10 @@ function VendorPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-      <div className="mb-8 rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-6 py-8 text-white sm:px-9 sm:py-10">
-        <p className="eyebrow text-orange-300">Meet the people behind the products</p>
+      <div className="page-hero mb-8 px-6 py-8 sm:px-9 sm:py-10">
+        <p className="eyebrow">Meet the people behind the products</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Campus vendors</h1>
-        <p className="mt-3 max-w-2xl leading-7 text-slate-300">Explore local storefronts, discover what they offer, and connect with sellers directly.</p>
+        <p className="mt-3 max-w-2xl leading-7 text-slate-600">Explore local storefronts, discover what they offer, and connect with sellers directly.</p>
       </div>
       {loadError && <div className="mb-5"><RetryAlert message={`We couldn't load vendors. ${loadError}`} onRetry={() => { setLoadError(''); setLoading(true); setReloadKey((key) => key + 1) }} /></div>}
       {loading ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="rounded-3xl border border-slate-200 bg-white p-5"><div className="skeleton h-16 w-16 rounded-2xl" /><div className="skeleton mt-4 h-5 w-2/3" /><div className="skeleton mt-3 h-4 w-full" /><div className="skeleton mt-2 h-4 w-4/5" /></div>)}</div> : vendors.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -775,6 +812,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="app-shell min-h-screen">
+        <ScrollToTop />
         <SiteHeader />
         <div className="route-content">
           <Routes>

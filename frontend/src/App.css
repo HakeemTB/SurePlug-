@@ -232,7 +232,7 @@
   }
 }
 
-/* SurePlug visual direction: lively northern-campus market, not a generic SaaS template. */
+/* SurePlug base styles (overridden by theme.css). */
 :root {
   --sp-ink: #18231e;
   --sp-green: #176b45;
