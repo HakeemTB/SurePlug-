@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRight, Compass, House, Tag, User, MapPin, MessageCircle
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Link, useLocation, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
-const API_BASE = '/api/v1'
+const API_BASE = 'https://sureplug-0q7j.onrender.com/api/v1';
 
 type Category = { id: number; name: string; slug: string; description?: string }
 type Campus = { id: number; name: string; zone: string; description: string }
