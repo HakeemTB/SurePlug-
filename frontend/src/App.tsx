@@ -613,14 +613,21 @@ function DashboardPage() {
     setNotice('')
     try {
       const isRegistering = authMode === 'register'
-      await fetchJson('/auth/csrf/')
-      const response = await fetchJson<{ message: string }>('/auth/' + (isRegistering ? 'register/' : 'login/'), {
-        method: 'POST',
-        body: JSON.stringify(isRegistering ? credentials : {
-          username: credentials.username,
-          password: credentials.password,
-        }),
-      })
+      const csrf = await fetchJson<{ csrfToken: string }>('/auth/csrf/')
+
+      const response = await fetchJson<{ message: string }>(
+        '/auth/' + (isRegistering ? 'register/' : 'login/'),
+        {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrf.csrfToken,
+          },
+          body: JSON.stringify(isRegistering ? credentials : {
+            username: credentials.username,
+            password: credentials.password,
+          }),
+        }
+      )
       await refreshDashboard()
       setNotice(response.message)
     } catch (requestError) {
