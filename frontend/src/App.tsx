@@ -85,7 +85,7 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> 
   const response = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers,
-    credentials: 'same-origin',
+    credentials: 'include',
   })
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null)
