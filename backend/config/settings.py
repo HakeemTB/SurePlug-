@@ -24,7 +24,7 @@ if not SECRET_KEY and DEBUG:
 if not SECRET_KEY:
     raise ImproperlyConfigured('Set SECRET_KEY to a strong, private value before starting SurePlug.')
 
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'sureplug-0q7j.onrender.com')
 if not DEBUG and not ALLOWED_HOSTS:
     raise ImproperlyConfigured('Set ALLOWED_HOSTS to the production hostnames.')
 
@@ -133,8 +133,8 @@ REST_FRAMEWORK = {
     ],
 }
 
-CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
-CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173')
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'https://sure-plug-nine.vercel.app')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', 'https://sure-plug-nine.vercel.app')
 CORS_ALLOW_CREDENTIALS = True
 
 SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
