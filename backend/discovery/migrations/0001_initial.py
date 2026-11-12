@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
                 ('category', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='buyer_signals', to='categories.category')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='buyer_signals', to=settings.AUTH_USER_MODEL)),
             ],
-            options={'ordering': ['-created_at'], 'indexes': [models.Index(fields=['status', 'expires_at'], name='discovery_b_status_7a1d88_idx'), models.Index(fields=['category', 'status'], name='discovery_b_categor_2df04f_idx')]},
+            options={'ordering': ['-created_at'], 'indexes': [models.Index(fields=['status', 'expires_at']), models.Index(fields=['category', 'status'])]},
         ),
         migrations.CreateModel(
             name='BuyerSignalResponse',
