@@ -131,7 +131,13 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'condition', 'availability', 'image', 'contact_phone', 'whatsapp_number', 'external_url']
+        fields = ['name', 'description', 'price', 'condition', 'availability', 'is_published', 'image', 'contact_phone', 'whatsapp_number', 'external_url']
+        extra_kwargs = {'is_published': {'required': False}}
+
+    def validate_is_published(self, value):
+        if value and (self.instance.approval_status != 'approved' or not self.instance.vendor.is_verified):
+            raise serializers.ValidationError('This listing cannot be published until the seller and listing are approved.')
+        return value
 
     def update(self, instance, validated_data):
         changed_fields = set(validated_data.keys())
