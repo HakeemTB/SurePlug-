@@ -89,7 +89,7 @@ footer a:hover { color: var(--sun) !important; }
 }
 
 /* Bottom navigation (phones), placeholders, retry */
-.bottom-nav { position: fixed; inset: auto 0 0 0; z-index: 50; display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: env(safe-area-inset-bottom); background: rgb(255 255 255 / 95%); backdrop-filter: blur(14px); border-top: 1px solid rgb(20 22 59 / 10%); }
+.bottom-nav { position: fixed; inset: auto 0 0 0; z-index: 50; display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); background: rgb(255 255 255 / 95%); backdrop-filter: blur(14px); border-top: 1px solid rgb(20 22 59 / 10%); }
 .bottom-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 12px; font-weight: 600; color: #6b6e9e; text-decoration: none; }
 .bottom-nav-icon { display: grid; place-items: center; width: 52px; height: 28px; border-radius: 999px; transition: background 160ms; }
 .bottom-nav-item.is-active { color: var(--indigo); font-weight: 700; }

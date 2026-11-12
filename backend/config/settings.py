@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'vendors',
     'products',
     'moderation',
+    'discovery',
 ]
 
 MIDDLEWARE = [
