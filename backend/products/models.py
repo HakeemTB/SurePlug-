@@ -20,6 +20,11 @@ class Product(models.Model):
         ('used', 'Used'),
         ('thrift', 'Thrift'),
     ]
+    APPROVAL_CHOICES = [
+        ('pending', 'Pending review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Changes required / rejected'),
+    ]
 
     vendor = models.ForeignKey(VendorProfile, on_delete=models.CASCADE, related_name='products')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
@@ -31,7 +36,11 @@ class Product(models.Model):
     currency = models.CharField(max_length=3, default='NGN')
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new')
     availability = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='in_stock')
-    is_published = models.BooleanField(default=True)
+    is_published = models.BooleanField(default=False)
+    approval_status = models.CharField(max_length=12, choices=APPROVAL_CHOICES, default='pending')
+    moderation_note = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='reviewed_sureplug_products')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     featured = models.BooleanField(default=False)
     image = models.ImageField(upload_to='products', blank=True, null=True)
     contact_phone = models.CharField(max_length=30, blank=True)
@@ -53,6 +62,26 @@ class Product(models.Model):
                 self.slug = f'{base_slug}-{suffix}'
                 suffix += 1
         super().save(*args, **kwargs)
+
+    def approve(self, reviewer):
+        from django.utils import timezone
+        if not self.vendor.is_verified:
+            raise ValueError('Verify the seller before approving this listing.')
+        self.approval_status = 'approved'
+        self.is_published = True
+        self.moderation_note = ''
+        self.reviewed_by = reviewer
+        self.reviewed_at = timezone.now()
+        self.save(update_fields=['approval_status', 'is_published', 'moderation_note', 'reviewed_by', 'reviewed_at', 'updated_at'])
+
+    def reject(self, reviewer, note=''):
+        from django.utils import timezone
+        self.approval_status = 'rejected'
+        self.is_published = False
+        self.moderation_note = note
+        self.reviewed_by = reviewer
+        self.reviewed_at = timezone.now()
+        self.save(update_fields=['approval_status', 'is_published', 'moderation_note', 'reviewed_by', 'reviewed_at', 'updated_at'])
 
     def __str__(self):
         return self.name
