@@ -96,11 +96,12 @@ class BuyerSignalListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        BuyerSignal.objects.filter(status='broadcast', expires_at__lte=timezone.now()).update(status='expired')
         vendor = getattr(request.user, 'vendor_profile', None)
         if vendor and vendor.is_active:
             queryset = BuyerSignal.objects.filter(status='broadcast', expires_at__gt=timezone.now()).select_related('category').annotate(response_count=Count('responses'))
         else:
-            queryset = BuyerSignal.objects.filter(user=request.user).exclude(status='expired').select_related('category').annotate(response_count=Count('responses'))
+            queryset = BuyerSignal.objects.filter(user=request.user).select_related('category').annotate(response_count=Count('responses'))
         category = request.query_params.get('category')
         if category:
             queryset = queryset.filter(category__slug=category)
