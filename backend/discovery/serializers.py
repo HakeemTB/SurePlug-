@@ -67,6 +67,12 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
+    def update(self, instance, validated_data):
+        expiry_hours = validated_data.pop('expiry_hours', None)
+        if expiry_hours is not None:
+            validated_data['expires_at'] = timezone.now() + timedelta(hours=expiry_hours)
+        return super().update(instance, validated_data)
+
 
 class BuyerSignalResponseSerializer(serializers.ModelSerializer):
     vendor_name = serializers.CharField(source='vendor.business_name', read_only=True)
