@@ -16,7 +16,7 @@ class DiscoveryApiTests(APITestCase):
         self.category = Category.objects.create(name='Electronics', slug='electronics')
         self.buyer = User.objects.create_user(username='buyer', password='CampusMarket!2468')
         self.seller_user = User.objects.create_user(username='seller', password='CampusMarket!2468')
-        self.vendor = VendorProfile.objects.create(user=self.seller_user, business_name='Nearby Store', slug='nearby-store', phone='08030000000')
+        self.vendor = VendorProfile.objects.create(user=self.seller_user, business_name='Nearby Store', slug='nearby-store', phone='08030000000', is_verified=True)
         self.location = SellerLocation.objects.create(vendor=self.vendor, latitude=9.203, longitude=12.481, location_label='Near campus', service_radius_km=10)
 
     def test_nearby_discovery_returns_vendor_with_distance_without_public_coordinates(self):

@@ -21,6 +21,7 @@ class ProductApiTests(APITestCase):
             slug='owner-store',
             phone='08030000000',
             campus=self.campus,
+            is_verified=True,
         )
         self.product = Product.objects.create(
             vendor=self.vendor,
@@ -29,6 +30,8 @@ class ProductApiTests(APITestCase):
             name='USB-C charger',
             description='Fast charger for campus.',
             price=Decimal('6500.00'),
+            is_published=True,
+            approval_status='approved',
         )
 
     def test_public_discovery_applies_query_and_campus_filters(self):
@@ -76,7 +79,57 @@ class ProductApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertNotEqual(response.data['slug'], self.product.slug)
-        self.assertTrue(Product.objects.filter(slug=response.data['slug'], vendor=self.vendor).exists())
+        created = Product.objects.get(slug=response.data['slug'], vendor=self.vendor)
+        self.assertEqual(created.approval_status, 'pending')
+        self.assertFalse(created.is_published)
+
+    def test_public_discovery_hides_pending_and_rejected_listings(self):
+        self.product.approval_status = 'pending'
+        self.product.save()
+        response = self.client.get(reverse('product-list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [])
+
+    def test_vendor_cannot_publish_unapproved_listing_by_api(self):
+        self.client.force_authenticate(user=self.owner)
+        self.product.approval_status = 'pending'
+        self.product.is_published = False
+        self.product.save()
+        response = self.client.patch(
+            reverse('product-update', args=[self.product.slug]),
+            {'is_published': True},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.is_published)
+
+    def test_material_listing_edit_resets_approval(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            reverse('product-update', args=[self.product.slug]),
+            {'price': '7200.00'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.approval_status, 'pending')
+        self.assertFalse(self.product.is_published)
+
+    def test_admin_approval_requires_verified_seller(self):
+        self.vendor.is_verified = False
+        self.vendor.save(update_fields=['is_verified'])
+        with self.assertRaises(ValueError):
+            self.product.approve(self.owner)
+
+    def test_verified_seller_listing_can_be_approved(self):
+        self.product.is_published = False
+        self.product.approval_status = 'pending'
+        self.product.save()
+        self.product.approve(self.owner)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.approval_status, 'approved')
+        self.assertTrue(self.product.is_published)
 
     def test_vendor_cannot_create_product_with_negative_price(self):
         self.client.force_authenticate(user=self.owner)

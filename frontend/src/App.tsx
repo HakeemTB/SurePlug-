@@ -1,4 +1,5 @@
 import { NearbyPage, BuyerSignalsPage, SellerLocationPage } from './DiscoveryPages'
+import { SellerVerificationPage } from './SellerVerificationPage'
 import { ArrowLeft, ArrowRight, Compass, House, Tag, User, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Store } from 'lucide-react'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Link, useLocation, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -31,6 +32,8 @@ type Product = {
   condition: string;
   availability: string;
   is_published: boolean;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  moderation_note?: string;
   featured: boolean;
   image?: string | null;
   contact_phone?: string;
@@ -45,7 +48,7 @@ type Product = {
 
 type VendorDashboard = {
   vendor: Vendor;
-  stats: { published: number; unavailable: number; drafts: number; total: number };
+  stats: { published: number; pending_review: number; rejected: number; unavailable: number; drafts: number; total: number };
   products: Product[];
 }
 
@@ -762,19 +765,24 @@ function DashboardPage() {
           }} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">Sign out</button>
         </div>
         <p className="mt-2 text-slate-600">Manage listings, stock visibility, and contact information from one place.</p>
+        {!profile.vendor.is_verified && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Your seller account is not verified yet. You can prepare listings, but they will remain hidden until seller verification and listing review are approved. <Link to="/seller-verification" className="font-bold underline">Complete seller verification</Link>.</div>}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link to="/seller-location" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Set location & service area</Link>
+          <Link to="/seller-verification" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Seller verification</Link>
           <Link to="/buyer-signals" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">View buyer requests</Link>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-2xl bg-orange-50 p-4"><div className="text-sm text-slate-600">Published</div><div className="mt-2 text-3xl font-black text-orange-600">{profile.stats.published}</div></div>
+          <div className="rounded-2xl bg-amber-50 p-4"><div className="text-sm text-slate-600">Awaiting review</div><div className="mt-2 text-3xl font-black text-amber-700">{profile.stats.pending_review}</div></div>
+          <div className="rounded-2xl bg-rose-50 p-4"><div className="text-sm text-slate-600">Changes requested</div><div className="mt-2 text-3xl font-black text-rose-700">{profile.stats.rejected}</div></div>
           <div className="rounded-2xl bg-slate-100 p-4"><div className="text-sm text-slate-600">Unavailable</div><div className="mt-2 text-3xl font-black text-slate-700">{profile.stats.unavailable}</div></div>
           <div className="rounded-2xl bg-emerald-50 p-4"><div className="text-sm text-slate-600">Drafts</div><div className="mt-2 text-3xl font-black text-emerald-600">{profile.stats.drafts}</div></div>
         </div>
         {error && <div role="alert" className="mt-6 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         {notice && <div role="status" className="mt-6 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</div>}
         <form onSubmit={submitListing} className="mt-8 rounded-2xl bg-slate-50 p-5">
-          <h2 className="text-xl font-bold text-slate-900">Add a listing</h2>
+          <h2 className="text-xl font-bold text-slate-900">Submit a listing</h2>
+          <p className="mt-1 text-sm text-slate-600">New and materially edited listings stay hidden until your seller account and the listing have both passed review.</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-medium text-slate-700">Product name
               <input required maxLength={200} value={newListing.name} onChange={(event) => setNewListing((current) => ({ ...current, name: event.target.value }))} className={`${fieldClass} mt-1`} />
@@ -798,7 +806,7 @@ function DashboardPage() {
               <textarea required value={newListing.description} onChange={(event) => setNewListing((current) => ({ ...current, description: event.target.value }))} className={`${fieldClass} mt-1`} rows={3} />
             </label>
           </div>
-          <button disabled={submitting} className="mt-4 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Saving...' : 'Publish listing'}</button>
+          <button disabled={submitting} className="mt-4 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Submitting...' : 'Submit for review'}</button>
         </form>
         <div className="mt-8">
           <h2 className="text-xl font-bold text-slate-900">Your listings</h2>
@@ -808,9 +816,11 @@ function DashboardPage() {
                 <div>
                   <Link to={`/product/${product.slug}`} className="font-semibold text-slate-900 hover:text-orange-600">{product.name}</Link>
                   <div className="mt-1 text-sm text-slate-500">{formatCurrency(product.price)} · {product.availability}</div>
+                  <div className="mt-1 text-xs font-semibold capitalize text-slate-500">Listing review: {product.approval_status.replace('_', ' ')}</div>
+                  {product.moderation_note && <p className="mt-1 max-w-xl text-xs text-rose-700">Review note: {product.moderation_note}</p>}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => void togglePublished(product)} className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">{product.is_published ? 'Unpublish' : 'Publish'}</button>
+                  {product.is_published ? <button onClick={() => void togglePublished(product)} className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">Unpublish</button> : product.approval_status === 'approved' && profile.vendor.is_verified ? <button onClick={() => void togglePublished(product)} className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">Publish</button> : <span className="self-center text-xs text-slate-500">Awaiting approval</span>}
                   <button onClick={() => void deleteProduct(product)} className="rounded-full border border-red-200 px-3 py-2 text-sm font-medium text-red-700">Delete</button>
                 </div>
               </div>
@@ -838,6 +848,7 @@ function App() {
             <Route path="/nearby" element={<NearbyPage />} />
             <Route path="/buyer-signals" element={<BuyerSignalsPage />} />
             <Route path="/seller-location" element={<SellerLocationPage />} />
+            <Route path="/seller-verification" element={<SellerVerificationPage />} />
             <Route path="/vendor/:slug" element={<VendorStorefrontPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>

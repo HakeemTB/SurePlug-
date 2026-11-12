@@ -35,7 +35,7 @@ class NearbyDiscoveryAPIView(APIView):
         params.is_valid(raise_exception=True)
         lat, lng = params.validated_data['latitude'], params.validated_data['longitude']
         radius, kind = params.validated_data['radius_km'], params.validated_data['kind']
-        locations = SellerLocation.objects.select_related('vendor', 'vendor__user', 'vendor__campus').filter(vendor__is_active=True)
+        locations = SellerLocation.objects.select_related('vendor', 'vendor__user', 'vendor__campus').filter(vendor__is_active=True, vendor__is_verified=True)
         matches = []
         for location in locations:
             distance = distance_km(lat, lng, location.latitude, location.longitude)
@@ -52,8 +52,8 @@ class NearbyDiscoveryAPIView(APIView):
                 result['vendors'].append(vendor_data)
         if kind in ('all', 'products') and vendor_ids:
             products = Product.objects.filter(
-                vendor_id__in=vendor_ids, vendor__is_active=True,
-                is_published=True, availability__in=['in_stock', 'limited'],
+                vendor_id__in=vendor_ids, vendor__is_active=True, vendor__is_verified=True,
+                is_published=True, approval_status='approved', availability__in=['in_stock', 'limited'],
             ).select_related('vendor', 'vendor__user', 'vendor__campus', 'category', 'campus')
             distance_by_vendor = {location.vendor_id: distance for location, distance in matches}
             for product in ProductListSerializer(products, many=True).data:
@@ -98,14 +98,16 @@ class BuyerSignalListCreateAPIView(APIView):
     def get(self, request):
         BuyerSignal.objects.filter(status='broadcast', expires_at__lte=timezone.now()).update(status='expired')
         vendor = getattr(request.user, 'vendor_profile', None)
-        if vendor and vendor.is_active:
+        if vendor and vendor.is_active and vendor.is_verified:
             queryset = BuyerSignal.objects.filter(status='broadcast', expires_at__gt=timezone.now()).select_related('category').annotate(response_count=Count('responses'))
+        elif vendor and vendor.is_active and not vendor.is_verified:
+            return Response({'error': 'Complete seller verification before browsing buyer requests.'}, status=403)
         else:
             queryset = BuyerSignal.objects.filter(user=request.user).select_related('category').annotate(response_count=Count('responses'))
         category = request.query_params.get('category')
         if category:
             queryset = queryset.filter(category__slug=category)
-        if vendor and vendor.is_active:
+        if vendor and vendor.is_active and vendor.is_verified:
             if hasattr(vendor, 'geo_location'):
                 loc = vendor.geo_location
                 eligible = []
@@ -156,8 +158,8 @@ class BuyerSignalResponseAPIView(APIView):
 
     def post(self, request, signal_id):
         vendor = getattr(request.user, 'vendor_profile', None)
-        if not vendor or not vendor.is_active:
-            return Response({'error': 'An active seller account is required.'}, status=403)
+        if not vendor or not vendor.is_active or not vendor.is_verified:
+            return Response({'error': 'An active, verified seller account is required to respond.'}, status=403)
         signal = get_object_or_404(BuyerSignal, pk=signal_id, status='broadcast', expires_at__gt=timezone.now())
         if signal.user_id == request.user.id:
             return Response({'error': 'You cannot respond to your own request.'}, status=400)
