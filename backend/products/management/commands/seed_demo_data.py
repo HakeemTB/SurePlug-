@@ -77,7 +77,7 @@ class Command(BaseCommand):
                     'campus': campuses[campus_name],
                     'location_description': location,
                     'description': f'{business_name} serves students around {campus_name}.',
-                    'is_verified': False,
+                    'is_verified': True,
                     'is_active': True,
                 },
             )
