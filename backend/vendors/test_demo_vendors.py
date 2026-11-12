@@ -15,11 +15,11 @@ class DemoVendorsCommandTests(TestCase):
             self.assertTrue(vendor.is_active)
             self.assertTrue(vendor.business_name.startswith('Demo '))
 
-    def test_demo_vendors_appear_in_the_public_vendor_list(self):
+    def test_unverified_demo_vendors_are_not_listed_publicly(self):
         call_command('seed_demo_vendors')
         response = self.client.get('/api/v1/vendors/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()), 5)
+        self.assertEqual(len(response.json()), 0)
 
     def test_remove_deletes_them(self):
         call_command('seed_demo_vendors')
