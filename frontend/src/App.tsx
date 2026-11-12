@@ -144,8 +144,9 @@ function BottomNav() {
   if (pathname.startsWith('/product/')) return null
   const items = [
     { to: '/', label: 'Home', icon: House, active: pathname === '/' },
-    { to: '/products', label: 'Explore', icon: Compass, active: pathname.startsWith('/product') },
-    { to: '/vendors', label: 'Vendors', icon: Store, active: pathname.startsWith('/vendor') && pathname !== '/vendor-dashboard' },
+    { to: '/products', label: 'Explore', icon: Compass, active: pathname === '/products' || pathname.startsWith('/product/') },
+    { to: '/nearby', label: 'Nearby', icon: MapPin, active: pathname.startsWith('/nearby') },
+    { to: '/buyer-signals', label: 'Requests', icon: Search, active: pathname.startsWith('/buyer-signals') },
     { to: '/dashboard', label: 'Account', icon: User, active: pathname.startsWith('/dashboard') },
   ]
   return (
