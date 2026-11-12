@@ -159,6 +159,8 @@ class BuyerSignalResponseAPIView(APIView):
         if not vendor or not vendor.is_active:
             return Response({'error': 'An active seller account is required.'}, status=403)
         signal = get_object_or_404(BuyerSignal, pk=signal_id, status='broadcast', expires_at__gt=timezone.now())
+        if signal.user_id == request.user.id:
+            return Response({'error': 'You cannot respond to your own request.'}, status=400)
         serializer = BuyerSignalResponseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         product = serializer.validated_data.get('product')
