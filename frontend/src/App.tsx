@@ -1,3 +1,4 @@
+import { NearbyPage, BuyerSignalsPage, SellerLocationPage } from './DiscoveryPages'
 import { ArrowLeft, ArrowRight, Compass, House, Tag, User, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Store } from 'lucide-react'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Link, useLocation, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -204,6 +205,8 @@ function SiteHeader() {
           <Link to="/" className="nav-link">Home</Link>
           <Link to="/products" className="nav-link">Explore products</Link>
           <Link to="/vendors" className="nav-link">Vendors</Link>
+          <Link to="/nearby" className="nav-link">Nearby</Link>
+          <Link to="/buyer-signals" className="nav-link">I’m looking for</Link>
         </nav>
         <Link to="/dashboard" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500 sm:px-5">
           <Store className="h-4 w-4" /><span className="hidden sm:inline">Sell on SurePlug</span><span className="sm:hidden">Sell</span>
@@ -827,6 +830,9 @@ function App() {
             <Route path="/products" element={<ProductListingPage />} />
             <Route path="/product/:slug" element={<ProductDetailPage />} />
             <Route path="/vendors" element={<VendorPage />} />
+            <Route path="/nearby" element={<NearbyPage />} />
+            <Route path="/buyer-signals" element={<BuyerSignalsPage />} />
+            <Route path="/seller-location" element={<SellerLocationPage />} />
             <Route path="/vendor/:slug" element={<VendorStorefrontPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>
