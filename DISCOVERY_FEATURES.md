@@ -60,3 +60,24 @@ A GitHub Actions workflow on this branch runs these backend checks and the front
 ## Current implementation boundary
 
 Distance calculations currently use the Haversine formula over seller location records. This is appropriate for the current MVP scale. For a large marketplace, move distance filtering into PostgreSQL/PostGIS or a database bounding-box query with spatial indexes. Do not expose raw buyer or seller coordinates in public serializers. Browser geolocation requires HTTPS and user permission.
+
+## Seller identity verification and listing moderation
+
+- Anyone may register a seller account. New seller accounts start unverified.
+- Sellers submit their legal name, selected identity document type, the final four characters of the document reference, and a contact phone through `POST /api/v1/vendors/verification/`.
+- Sellers can check their status through `GET /api/v1/vendors/verification/`. Full identity numbers and ID images are not collected in this MVP.
+- Staff review submissions in Django Admin at `/admin/`. Approving a verification submission marks the seller verified; rejecting it leaves the seller unverified and allows a corrected resubmission.
+- New listings are created unpublished with `approval_status=pending`. A seller cannot publish or approve their own listing.
+- Staff can approve or reject pending listings in Django Admin. Approval is blocked until the seller is verified. Rejection hides the listing and records feedback for the seller.
+- Material edits to a listing (name, description, price, condition or image) send it back to pending review and unpublish it. Availability/contact edits do not trigger a full re-review.
+- Public product/vendor discovery, nearby results and seller responses to Buyer Signals are limited to active verified sellers and approved published listings.
+- The migration preserves currently published listings as approved, but does not falsely mark their sellers as verified. Those sellers must complete verification before they appear in public discovery again.
+
+### Staff review workflow
+
+1. Open `/admin/` using a Django staff/superuser account.
+2. Open **Vendor verifications**, inspect the submission and choose the approve or reject action.
+3. Once the seller is approved, open **Products**, inspect the pending listing and choose approve or reject.
+4. Approved listings are published. Rejected listings remain private; the seller sees the review note in their dashboard and can edit/resubmit.
+
+The current identity workflow is a manual-review MVP and collects only limited reference details. Do not ask users to send full identity numbers through this form. Before collecting ID scans or full identity documents, configure private object storage and authenticated, time-limited document access; the current public media setup is not suitable for storing identity documents.
