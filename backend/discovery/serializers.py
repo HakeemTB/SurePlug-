@@ -1,6 +1,7 @@
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
+from decimal import Decimal
 
 from categories.models import Category
 from vendors.models import VendorProfile
@@ -23,6 +24,9 @@ class SellerLocationSerializer(serializers.ModelSerializer):
 
 
 class BuyerSignalSerializer(serializers.ModelSerializer):
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True, write_only=True)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True, write_only=True)
+    responses = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     response_count = serializers.IntegerField(read_only=True)
 
@@ -32,9 +36,15 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
             'id', 'item_name', 'category', 'category_name', 'description',
             'budget_min', 'budget_max', 'location_label', 'latitude', 'longitude',
             'radius_km', 'urgency', 'status', 'expires_at', 'created_at',
-            'response_count',
+            'response_count', 'responses',
         ]
         read_only_fields = ['id', 'status', 'created_at']
+
+    def get_responses(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.id != obj.user_id:
+            return []
+        return BuyerSignalResponseSerializer(obj.responses.select_related('vendor'), many=True).data
 
     def validate(self, attrs):
         minimum = attrs.get('budget_min', getattr(self.instance, 'budget_min', None))
