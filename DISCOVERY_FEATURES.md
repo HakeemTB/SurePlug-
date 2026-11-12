@@ -27,7 +27,7 @@ All endpoints are under `/api/v1/`.
 | Method | Endpoint | Access | Purpose |
 |---|---|---|---|
 | GET | `nearby/?latitude=...&longitude=...&radius_km=5&kind=all` | Public | Find nearby sellers and listings |
-| GET | `vendors/location/` | Signed-in seller | Read own saved location |
+| GET | `seller/location/` | Signed-in seller | Read own saved location |
 | PUT | `vendors/location/` | Signed-in seller | Save or update coordinates, label and service radius |
 | GET | `buyer-signals/` | Signed-in user | Sellers see active matching requests; buyers see their own requests and responses |
 | POST | `buyer-signals/` | Signed-in user | Publish a buyer request |
