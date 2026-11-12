@@ -113,6 +113,21 @@ class ProductApiTests(APITestCase):
         self.assertEqual(self.product.approval_status, 'pending')
         self.assertFalse(self.product.is_published)
 
+    def test_admin_approval_requires_verified_seller(self):
+        self.vendor.is_verified = False
+        self.vendor.save(update_fields=['is_verified'])
+        with self.assertRaises(ValueError):
+            self.product.approve(self.owner)
+
+    def test_verified_seller_listing_can_be_approved(self):
+        self.product.is_published = False
+        self.product.approval_status = 'pending'
+        self.product.save()
+        self.product.approve(self.owner)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.approval_status, 'approved')
+        self.assertTrue(self.product.is_published)
+
     def test_vendor_cannot_create_product_with_negative_price(self):
         self.client.force_authenticate(user=self.owner)
 
