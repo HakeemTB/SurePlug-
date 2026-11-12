@@ -770,7 +770,7 @@ function DashboardPage() {
           <Link to="/seller-verification" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Seller verification</Link>
           <Link to="/buyer-signals" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">View buyer requests</Link>
         </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-2xl bg-orange-50 p-4"><div className="text-sm text-slate-600">Published</div><div className="mt-2 text-3xl font-black text-orange-600">{profile.stats.published}</div></div>
           <div className="rounded-2xl bg-amber-50 p-4"><div className="text-sm text-slate-600">Awaiting review</div><div className="mt-2 text-3xl font-black text-amber-700">{profile.stats.pending_review}</div></div>
           <div className="rounded-2xl bg-rose-50 p-4"><div className="text-sm text-slate-600">Changes requested</div><div className="mt-2 text-3xl font-black text-rose-700">{profile.stats.rejected}</div></div>
@@ -780,7 +780,8 @@ function DashboardPage() {
         {error && <div role="alert" className="mt-6 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         {notice && <div role="status" className="mt-6 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</div>}
         <form onSubmit={submitListing} className="mt-8 rounded-2xl bg-slate-50 p-5">
-          <h2 className="text-xl font-bold text-slate-900">Add a listing</h2>
+          <h2 className="text-xl font-bold text-slate-900">Submit a listing</h2>
+          <p className="mt-1 text-sm text-slate-600">New and materially edited listings stay hidden until your seller account and the listing have both passed review.</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-medium text-slate-700">Product name
               <input required maxLength={200} value={newListing.name} onChange={(event) => setNewListing((current) => ({ ...current, name: event.target.value }))} className={`${fieldClass} mt-1`} />
@@ -804,7 +805,7 @@ function DashboardPage() {
               <textarea required value={newListing.description} onChange={(event) => setNewListing((current) => ({ ...current, description: event.target.value }))} className={`${fieldClass} mt-1`} rows={3} />
             </label>
           </div>
-          <button disabled={submitting} className="mt-4 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Saving...' : 'Publish listing'}</button>
+          <button disabled={submitting} className="mt-4 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Submitting...' : 'Submit for review'}</button>
         </form>
         <div className="mt-8">
           <h2 className="text-xl font-bold text-slate-900">Your listings</h2>
