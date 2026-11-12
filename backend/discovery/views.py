@@ -116,7 +116,7 @@ class BuyerSignalListCreateAPIView(APIView):
                 queryset = queryset.filter(pk__in=eligible)
             else:
                 queryset = queryset.filter(latitude__isnull=True)
-        return Response(BuyerSignalSerializer(queryset, many=True).data)
+        return Response(BuyerSignalSerializer(queryset, many=True, context={'request': request}).data)
 
     def post(self, request):
         serializer = BuyerSignalSerializer(data=request.data, context={'request': request})
@@ -160,5 +160,7 @@ class BuyerSignalResponseAPIView(APIView):
         signal = get_object_or_404(BuyerSignal, pk=signal_id, status='broadcast', expires_at__gt=timezone.now())
         serializer = BuyerSignalResponseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if BuyerSignalResponse.objects.filter(signal=signal, vendor=vendor).exists():
+            return Response({'error': 'You have already responded to this request.'}, status=409)
         response = BuyerSignalResponse.objects.create(signal=signal, vendor=vendor, **serializer.validated_data)
         return Response(BuyerSignalResponseSerializer(response).data, status=201)
