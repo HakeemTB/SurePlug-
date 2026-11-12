@@ -761,6 +761,10 @@ function DashboardPage() {
           }} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">Sign out</button>
         </div>
         <p className="mt-2 text-slate-600">Manage listings, stock visibility, and contact information from one place.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link to="/seller-location" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Set location & service area</Link>
+          <Link to="/buyer-signals" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">View buyer requests</Link>
+        </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-orange-50 p-4"><div className="text-sm text-slate-600">Published</div><div className="mt-2 text-3xl font-black text-orange-600">{profile.stats.published}</div></div>
           <div className="rounded-2xl bg-slate-100 p-4"><div className="text-sm text-slate-600">Unavailable</div><div className="mt-2 text-3xl font-black text-slate-700">{profile.stats.unavailable}</div></div>
