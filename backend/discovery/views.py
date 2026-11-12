@@ -53,7 +53,7 @@ class NearbyDiscoveryAPIView(APIView):
         if kind in ('all', 'products') and vendor_ids:
             products = Product.objects.filter(
                 vendor_id__in=vendor_ids, vendor__is_active=True,
-                is_published=True, availability__in=['in_stock', 'limited'],
+                is_published=True, approval_status='approved', availability__in=['in_stock', 'limited'],
             ).select_related('vendor', 'vendor__user', 'vendor__campus', 'category', 'campus')
             distance_by_vendor = {location.vendor_id: distance for location, distance in matches}
             for product in ProductListSerializer(products, many=True).data:
