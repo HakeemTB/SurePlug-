@@ -765,6 +765,7 @@ function DashboardPage() {
           }} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">Sign out</button>
         </div>
         <p className="mt-2 text-slate-600">Manage listings, stock visibility, and contact information from one place.</p>
+        {!profile.vendor.is_verified && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Your seller account is not verified yet. You can prepare listings, but they will remain hidden until seller verification and listing review are approved. <Link to="/seller-verification" className="font-bold underline">Complete seller verification</Link>.</div>}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link to="/seller-location" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Set location & service area</Link>
           <Link to="/seller-verification" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Seller verification</Link>
