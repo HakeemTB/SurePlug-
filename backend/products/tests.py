@@ -21,6 +21,7 @@ class ProductApiTests(APITestCase):
             slug='owner-store',
             phone='08030000000',
             campus=self.campus,
+            is_verified=True,
         )
         self.product = Product.objects.create(
             vendor=self.vendor,
@@ -29,6 +30,8 @@ class ProductApiTests(APITestCase):
             name='USB-C charger',
             description='Fast charger for campus.',
             price=Decimal('6500.00'),
+            is_published=True,
+            approval_status='approved',
         )
 
     def test_public_discovery_applies_query_and_campus_filters(self):
