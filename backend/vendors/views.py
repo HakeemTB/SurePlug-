@@ -11,7 +11,7 @@ from .serializers import VendorProfileSerializer, VendorVerificationSerializer
 
 
 class VendorListAPIView(ListAPIView):
-    queryset = VendorProfile.objects.filter(is_active=True).select_related('user', 'campus')
+    queryset = VendorProfile.objects.filter(is_active=True, is_verified=True).select_related('user', 'campus')
     serializer_class = VendorProfileSerializer
 
 
@@ -19,7 +19,7 @@ class VendorDetailAPIView(APIView):
     def get(self, request, slug):
         vendor = get_object_or_404(
             VendorProfile.objects.filter(is_active=True).select_related('user', 'campus'),
-            slug=slug,
+            slug=slug, is_verified=True,
         )
         products = Product.objects.filter(
             vendor=vendor, is_published=True, approval_status='approved',
