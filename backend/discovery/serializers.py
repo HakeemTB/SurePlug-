@@ -27,6 +27,7 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
     latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True, write_only=True)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True, write_only=True)
     responses = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     response_count = serializers.IntegerField(read_only=True)
 
@@ -36,9 +37,13 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
             'id', 'item_name', 'category', 'category_name', 'description',
             'budget_min', 'budget_max', 'location_label', 'latitude', 'longitude',
             'radius_km', 'urgency', 'status', 'expires_at', 'created_at',
-            'response_count', 'responses',
+            'response_count', 'responses', 'is_owner',
         ]
         read_only_fields = ['id', 'status', 'created_at', 'expires_at']
+
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        return bool(request and request.user.is_authenticated and request.user.id == obj.user_id)
 
     def get_responses(self, obj):
         request = self.context.get('request')
