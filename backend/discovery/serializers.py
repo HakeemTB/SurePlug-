@@ -1,10 +1,6 @@
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
-from decimal import Decimal
-
-from categories.models import Category
-from vendors.models import VendorProfile
 from .models import BuyerSignal, BuyerSignalResponse, SellerLocation
 
 
@@ -30,6 +26,7 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
     is_owner = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
     response_count = serializers.IntegerField(read_only=True)
+    expiry_hours = serializers.ChoiceField(choices=[24, 72, 168], write_only=True, required=False, default=72)
 
     class Meta:
         model = BuyerSignal
@@ -37,7 +34,7 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
             'id', 'item_name', 'category', 'category_name', 'description',
             'budget_min', 'budget_max', 'location_label', 'latitude', 'longitude',
             'radius_km', 'urgency', 'status', 'expires_at', 'created_at',
-            'response_count', 'responses', 'is_owner',
+            'response_count', 'responses', 'is_owner', 'expiry_hours',
         ]
         read_only_fields = ['id', 'status', 'created_at', 'expires_at']
 
@@ -65,9 +62,7 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        expiry_hours = int(self.context['request'].data.get('expiry_hours', 72))
-        if expiry_hours not in (24, 72, 168):
-            raise serializers.ValidationError({'expiry_hours': 'Choose 24, 72, or 168 hours.'})
+        expiry_hours = validated_data.pop('expiry_hours', 72)
         validated_data['expires_at'] = timezone.now() + timedelta(hours=expiry_hours)
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
