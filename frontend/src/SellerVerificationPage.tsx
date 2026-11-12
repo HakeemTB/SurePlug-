@@ -80,7 +80,7 @@ export function SellerVerificationPage() {
   }
 
   const submission = data?.submission
-  const canSubmit = !data?.is_verified && submission?.status !== 'pending'
+  const canSubmit = Boolean(data && !data.is_verified && submission?.status !== 'pending')
   const field = 'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3'
 
   if (loading) return <main className="mx-auto max-w-3xl px-4 py-12">Loading seller verification…</main>
