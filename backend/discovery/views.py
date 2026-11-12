@@ -97,23 +97,25 @@ class BuyerSignalListCreateAPIView(APIView):
 
     def get(self, request):
         vendor = getattr(request.user, 'vendor_profile', None)
-        if not vendor or not vendor.is_active:
-            return Response({'error': 'Only active sellers can browse buyer signals.'}, status=403)
-        queryset = BuyerSignal.objects.filter(status='broadcast', expires_at__gt=timezone.now()).select_related('category').annotate(response_count=Count('responses'))
+        if vendor and vendor.is_active:
+            queryset = BuyerSignal.objects.filter(status='broadcast', expires_at__gt=timezone.now()).select_related('category').annotate(response_count=Count('responses'))
+        else:
+            queryset = BuyerSignal.objects.filter(user=request.user).exclude(status='expired').select_related('category').annotate(response_count=Count('responses'))
         category = request.query_params.get('category')
         if category:
             queryset = queryset.filter(category__slug=category)
-        if hasattr(vendor, 'geo_location'):
-            loc = vendor.geo_location
-            eligible = []
-            for signal in queryset:
-                if signal.latitude is None:
-                    eligible.append(signal.pk)
-                elif distance_km(loc.latitude, loc.longitude, signal.latitude, signal.longitude) <= min(signal.radius_km, loc.service_radius_km):
-                    eligible.append(signal.pk)
-            queryset = queryset.filter(pk__in=eligible)
-        else:
-            queryset = queryset.filter(latitude__isnull=True)
+        if vendor and vendor.is_active:
+            if hasattr(vendor, 'geo_location'):
+                loc = vendor.geo_location
+                eligible = []
+                for signal in queryset:
+                    if signal.latitude is None:
+                        eligible.append(signal.pk)
+                    elif distance_km(loc.latitude, loc.longitude, signal.latitude, signal.longitude) <= min(signal.radius_km, loc.service_radius_km):
+                        eligible.append(signal.pk)
+                queryset = queryset.filter(pk__in=eligible)
+            else:
+                queryset = queryset.filter(latitude__isnull=True)
         return Response(BuyerSignalSerializer(queryset, many=True).data)
 
     def post(self, request):
