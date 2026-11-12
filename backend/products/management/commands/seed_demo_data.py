@@ -106,6 +106,7 @@ class Command(BaseCommand):
                     'condition': 'used' if 'textbook' in name.lower() else 'new',
                     'availability': availability,
                     'is_published': True,
+                    'approval_status': 'approved',
                     'featured': name == 'Jollof rice lunch pack',
                 },
             )
