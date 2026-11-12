@@ -26,7 +26,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python manage.py check
       - run: python manage.py migrate --noinput
-      - run: python manage.py test accounts products moderation discovery
+      - run: python manage.py test accounts products moderation discovery vendors
       - run: python manage.py makemigrations --check --dry-run
 
   frontend:
