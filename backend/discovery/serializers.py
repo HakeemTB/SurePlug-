@@ -38,7 +38,7 @@ class BuyerSignalSerializer(serializers.ModelSerializer):
             'radius_km', 'urgency', 'status', 'expires_at', 'created_at',
             'response_count', 'responses',
         ]
-        read_only_fields = ['id', 'status', 'created_at']
+        read_only_fields = ['id', 'status', 'created_at', 'expires_at']
 
     def get_responses(self, obj):
         request = self.context.get('request')
