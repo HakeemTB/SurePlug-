@@ -38,6 +38,9 @@ class VendorDashboardAPIView(APIView):
             return Response({'error': 'This user is not a vendor.'}, status=403)
 
         products = Product.objects.filter(vendor=profile).select_related('category', 'campus', 'vendor')
+        product_data = ProductListSerializer(products, many=True).data
+        for item, product in zip(product_data, products):
+            item['moderation_note'] = product.moderation_note
         payload = {
             'vendor': VendorProfileSerializer(profile).data,
             'verification': profile.verification_submissions.first(),
@@ -49,7 +52,7 @@ class VendorDashboardAPIView(APIView):
                 'drafts': products.filter(is_published=False).count(),
                 'total': products.count(),
             },
-            'products': ProductListSerializer(products, many=True).data,
+            'products': product_data,
         }
         verification = payload['verification']
         payload['verification'] = VendorVerificationSerializer(verification).data if verification else None
