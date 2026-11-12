@@ -21,7 +21,7 @@ class ProductListAPIView(APIView):
         values = filters.validated_data
 
         queryset = Product.objects.filter(
-            is_published=True, approval_status='approved', vendor__is_active=True,
+            is_published=True, approval_status='approved', vendor__is_active=True, vendor__is_verified=True,
         ).select_related('vendor', 'vendor__user', 'category', 'campus', 'vendor__campus')
         query = values.get('q', '')
         category = values.get('category')
@@ -61,7 +61,7 @@ class ProductDetailAPIView(APIView):
 
     def get(self, request, slug):
         product = get_object_or_404(
-            Product.objects.filter(is_published=True, approval_status='approved', vendor__is_active=True)
+            Product.objects.filter(is_published=True, approval_status='approved', vendor__is_active=True, vendor__is_verified=True)
             .select_related('vendor', 'vendor__user', 'category', 'campus', 'vendor__campus'),
             slug=slug,
         )
