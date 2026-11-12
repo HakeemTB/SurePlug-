@@ -44,6 +44,8 @@ class DiscoveryApiTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['item_name'], 'Used laptop')
         self.assertEqual(response.data['status'], 'broadcast')
+        self.assertNotIn('latitude', response.data)
+        self.assertNotIn('longitude', response.data)
         self.assertTrue(BuyerSignal.objects.filter(user=self.buyer).exists())
         listing = self.client.get(reverse('buyer-signal-list-create'))
         self.assertEqual(listing.status_code, 200)
@@ -57,6 +59,14 @@ class DiscoveryApiTests(APITestCase):
         response = self.client.post(reverse('buyer-signal-respond', args=[signal.id]), {'message': 'I have one available.', 'price': '4500'}, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['vendor_name'], 'Nearby Store')
+
+    def test_invalid_budget_range_is_rejected(self):
+        self.client.force_authenticate(user=self.buyer)
+        response = self.client.post(reverse('buyer-signal-list-create'), {
+            'item_name': 'Laptop', 'location_label': 'MAU',
+            'budget_min': '200000', 'budget_max': '100000', 'expiry_hours': 72,
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
 
     def test_other_buyer_cannot_edit_or_delete_signal(self):
         signal = BuyerSignal.objects.create(user=self.buyer, item_name='Textbook', location_label='MAU', expires_at=timezone.now() + timedelta(days=2))
