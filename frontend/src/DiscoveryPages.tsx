@@ -151,7 +151,7 @@ export function SellerLocationPage() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  useEffect(() => { api<typeof form>('/vendors/location/').then(data=>setForm({...data,service_radius_km:String(data.service_radius_km)})).catch(()=>undefined) }, [])
+  useEffect(() => { api<typeof form>('/vendors/location/').then(data=>setForm({latitude:data.latitude || '',longitude:data.longitude || '',location_label:data.location_label || '',service_radius_km:String(data.service_radius_km || 5)})).catch(()=>undefined) }, [])
   const locate = () => navigator.geolocation?.getCurrentPosition(({coords})=>setForm(current=>({...current,latitude:String(coords.latitude),longitude:String(coords.longitude)})),()=>setError('Location access denied. Enter coordinates manually.'))
   const save = async (event: FormEvent) => {
     event.preventDefault(); setLoading(true); setError(''); setNotice('')
