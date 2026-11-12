@@ -21,8 +21,7 @@ class ProductListAPIView(APIView):
         values = filters.validated_data
 
         queryset = Product.objects.filter(
-            is_published=True,
-            vendor__is_active=True,
+            is_published=True, approval_status='approved', vendor__is_active=True,
         ).select_related('vendor', 'vendor__user', 'category', 'campus', 'vendor__campus')
         query = values.get('q', '')
         category = values.get('category')
@@ -37,10 +36,7 @@ class ProductListAPIView(APIView):
         if category:
             queryset = queryset.filter(category__slug=category)
         if campus:
-            queryset = queryset.filter(
-                Q(campus__name__icontains=campus)
-                | Q(vendor__campus__name__icontains=campus)
-            )
+            queryset = queryset.filter(Q(campus__name__icontains=campus) | Q(vendor__campus__name__icontains=campus))
         if min_price is not None:
             queryset = queryset.filter(price__gte=min_price)
         if max_price is not None:
@@ -57,8 +53,7 @@ class ProductListAPIView(APIView):
         elif ordering == 'featured':
             queryset = queryset.order_by('-featured', '-updated_at')
 
-        serializer = ProductListSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return Response(ProductListSerializer(queryset, many=True).data)
 
 
 class ProductDetailAPIView(APIView):
@@ -66,7 +61,7 @@ class ProductDetailAPIView(APIView):
 
     def get(self, request, slug):
         product = get_object_or_404(
-            Product.objects.filter(is_published=True, vendor__is_active=True)
+            Product.objects.filter(is_published=True, approval_status='approved', vendor__is_active=True)
             .select_related('vendor', 'vendor__user', 'category', 'campus', 'vendor__campus'),
             slug=slug,
         )
@@ -80,14 +75,10 @@ class ProductFilterSerializer(serializers.Serializer):
     min_price = serializers.DecimalField(required=False, max_digits=10, decimal_places=2, min_value=0)
     max_price = serializers.DecimalField(required=False, max_digits=10, decimal_places=2, min_value=0)
     availability = serializers.ChoiceField(required=False, choices=Product.AVAILABILITY_CHOICES)
-    ordering = serializers.ChoiceField(
-        required=False,
-        choices=['recent', 'price_asc', 'price_desc', 'featured'],
-    )
+    ordering = serializers.ChoiceField(required=False, choices=['recent', 'price_asc', 'price_desc', 'featured'])
 
     def validate(self, attrs):
-        minimum = attrs.get('min_price')
-        maximum = attrs.get('max_price')
+        minimum, maximum = attrs.get('min_price'), attrs.get('max_price')
         if minimum is not None and maximum is not None and minimum > maximum:
             raise serializers.ValidationError({'max_price': 'Must be greater than or equal to min_price.'})
         return attrs
@@ -101,7 +92,6 @@ class ProductCreateSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
     condition = serializers.ChoiceField(choices=Product.CONDITION_CHOICES)
     availability = serializers.ChoiceField(choices=Product.AVAILABILITY_CHOICES)
-    is_published = serializers.BooleanField(default=True)
     image = serializers.ImageField(required=False, allow_null=True)
     contact_phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
     whatsapp_number = serializers.CharField(max_length=30, required=False, allow_blank=True)
@@ -110,20 +100,13 @@ class ProductCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         category_name = validated_data.pop('category').strip()
         campus_name = validated_data.pop('campus').strip()
-        category_slug = slugify(category_name)
-        category, _ = Category.objects.get_or_create(
-            slug=category_slug,
-            defaults={'name': category_name},
-        )
+        category, _ = Category.objects.get_or_create(slug=slugify(category_name), defaults={'name': category_name})
         campus, _ = Campus.objects.get_or_create(name=campus_name, defaults={'zone': 'Campus', 'description': 'Campus listing'})
         vendor = self.context['request'].user.vendor_profile
-        product = Product.objects.create(
-            vendor=vendor,
-            category=category,
-            campus=campus,
-            **validated_data,
+        return Product.objects.create(
+            vendor=vendor, category=category, campus=campus,
+            is_published=False, approval_status='pending', **validated_data,
         )
-        return product
 
 
 class ProductCreateAPIView(APIView):
@@ -132,12 +115,36 @@ class ProductCreateAPIView(APIView):
     def post(self, request):
         vendor = getattr(request.user, 'vendor_profile', None)
         if not vendor or not vendor.is_active:
-            return Response({'error': 'Only vendor accounts can create products.'}, status=403)
+            return Response({'error': 'Only active seller accounts can submit listings.'}, status=403)
         serializer = ProductCreateSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            product = serializer.save()
-            return Response({'message': 'Product created.', 'slug': product.slug}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+        return Response({
+            'message': 'Listing submitted for review. It will appear in the marketplace after seller and listing checks are approved.',
+            'slug': product.slug,
+            'approval_status': product.approval_status,
+        }, status=status.HTTP_201_CREATED)
+
+
+class ProductUpdateSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+
+    class Meta:
+        model = Product
+        fields = ['name', 'description', 'price', 'condition', 'availability', 'image', 'contact_phone', 'whatsapp_number', 'external_url']
+
+    def update(self, instance, validated_data):
+        changed_fields = set(validated_data.keys())
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if changed_fields & {'name', 'description', 'price', 'condition', 'image'}:
+            instance.approval_status = 'pending'
+            instance.is_published = False
+            instance.moderation_note = ''
+            instance.reviewed_by = None
+            instance.reviewed_at = None
+        instance.save()
+        return instance
 
 
 class ProductUpdateAPIView(APIView):
@@ -151,25 +158,6 @@ class ProductUpdateAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(ProductDetailSerializer(serializer.instance).data)
-
-
-class ProductUpdateSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
-
-    class Meta:
-        model = Product
-        fields = [
-            'name',
-            'description',
-            'price',
-            'condition',
-            'availability',
-            'is_published',
-            'image',
-            'contact_phone',
-            'whatsapp_number',
-            'external_url',
-        ]
 
 
 class ProductDeleteAPIView(APIView):
