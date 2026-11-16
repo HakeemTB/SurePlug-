@@ -1,5 +1,6 @@
 import { NearbyPage, BuyerSignalsPage, SellerLocationPage } from './DiscoveryPages'
 import { SellerVerificationPage } from './SellerVerificationPage'
+import { AdminDashboardPage } from './AdminDashboardPage'
 import { ArrowLeft, ArrowRight, Compass, House, Tag, User, MapPin, MessageCircle, Phone, Search, ShieldCheck, ShoppingBag, Store } from 'lucide-react'
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Link, useLocation, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -851,6 +852,7 @@ function App() {
             <Route path="/seller-verification" element={<SellerVerificationPage />} />
             <Route path="/vendor/:slug" element={<VendorStorefrontPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
           </Routes>
         </div>
         <SiteFooter />
