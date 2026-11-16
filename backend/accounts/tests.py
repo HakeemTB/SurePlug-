@@ -90,3 +90,38 @@ class VendorAuthenticationTests(APITestCase):
             'business_name': 'CSRF Store',
         }, format='json')
         self.assertEqual(rejected_registration.status_code, 403)
+
+
+
+class AdminDashboardPermissionTests(APITestCase):
+    def test_admin_endpoints_require_staff_access(self):
+        user = User.objects.create_user(username='regular_member', password='MemberPass!2468')
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(reverse('admin-overview'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_staff_admin_can_read_overview_and_update_own_profile(self):
+        admin = User.objects.create_user(
+            username='dashboard_admin',
+            email='admin@example.test',
+            password='AdminPass!2468',
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=admin)
+
+        overview = self.client.get(reverse('admin-overview'))
+        profile = self.client.get(reverse('admin-profile'))
+        updated = self.client.patch(reverse('admin-profile'), {
+            'first_name': 'SurePlug',
+            'last_name': 'Administrator',
+            'email': 'ops@example.test',
+        }, format='json')
+
+        self.assertEqual(overview.status_code, 200)
+        self.assertIn('pending_verifications', overview.data)
+        self.assertEqual(profile.status_code, 200)
+        self.assertEqual(updated.status_code, 200)
+        admin.refresh_from_db()
+        self.assertEqual(admin.first_name, 'SurePlug')
+        self.assertEqual(admin.email, 'ops@example.test')
